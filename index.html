@@ -1227,11 +1227,52 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       if (el_gia) el_gia.value = it.gia;
       var el_tt = document.getElementById('bgi_tt_' + i);
       if (el_tt) el_tt.value = fmt(it.sl * it.gia);
-      bgRenderItems();
-      setTimeout(function () {
-        var m = document.getElementById('bgi_model_' + i);
-        if (m) { m.focus(); var l = m.value.length; m.setSelectionRange(l, l); }
-      }, 50);
+      // Cập nhật các ô tại chỗ (KHÔNG dựng lại sidebar) để không mất focus / nhảy phím trên điện thoại
+      bgSyncItemInputs(i);
+    }
+
+    // Đồng bộ giá trị các ô nhập của thiết bị i từ bgItems[i] mà không phá/dựng lại DOM
+    function bgSyncItemInputs(i) {
+      var it = bgItems[i];
+      function setVal(id, v) { var el = document.getElementById(id); if (el && document.activeElement !== el) el.value = v; }
+      function setSelIfOption(id, v) {
+        var el = document.getElementById(id); if (!el) return;
+        for (var k = 0; k < el.options.length; k++) { if (el.options[k].value === v) { el.value = v; return; } }
+      }
+      setVal('bgi_ten_' + i, it.ten);
+      setVal('bgi_gia_' + i, it.gia);
+      setVal('bgi_kw_' + i, it.kw || '');
+      var tt = document.getElementById('bgi_tt_' + i); if (tt) tt.value = fmt(it.sl * it.gia);
+      var csEl = document.getElementById('bgi_cs_' + i); if (csEl) csEl.value = it.csPhase || '3 Pha/380V/50Hz';
+      // Lưu lượng: tách số + đơn vị
+      var llM = String(it.luuluong || '').match(/^([0-9.,]+)\s*(.*)/);
+      setVal('bgi_llnum_' + i, llM ? llM[1] : '');
+      if (llM && llM[2].trim()) setSelIfOption('bgi_llunit_' + i, llM[2].trim());
+      // Cột áp: tách số + đơn vị (đơn vị lạ -> ô tự điền)
+      var caM = String(it.cotap || '').match(/^([0-9.,]+)\s*(.*)/);
+      setVal('bgi_canum_' + i, caM ? caM[1] : '');
+      var caUnit = caM ? caM[2].trim() : '';
+      var caSel = document.getElementById('bgi_caunit_' + i), cac = document.getElementById('bgi_cac_' + i);
+      if (caSel) {
+        if (caUnit && ['m', 'KPa', 'Bar'].indexOf(caUnit) < 0) {
+          caSel.value = '__custom__';
+          if (cac) { cac.style.display = ''; if (document.activeElement !== cac) cac.value = caUnit; }
+        } else {
+          caSel.value = caUnit || 'm';
+          if (cac) cac.style.display = 'none';
+        }
+      }
+      // Xuất xứ: trong danh sách -> chọn; ngoài danh sách -> ô tự điền
+      var xxSel = document.getElementById('bgi_xx_' + i), xxc = document.getElementById('bgi_xxc_' + i);
+      if (xxSel) {
+        if (it.xuatXu && ['Trung Quốc', 'Đài Loan', 'Italy'].indexOf(it.xuatXu) < 0) {
+          xxSel.value = '__custom__';
+          if (xxc) { xxc.style.display = ''; if (document.activeElement !== xxc) xxc.value = it.xuatXu; }
+        } else {
+          xxSel.value = it.xuatXu || '';
+          if (xxc) xxc.style.display = 'none';
+        }
+      }
     }
 
     function detectPhaseFromModel(model) {
@@ -1404,7 +1445,8 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
           + 'oninput="bgItems[' + i + '].ten=this.value;bgItems[' + i + '].tenEdited=true;bgAutoXX(' + i + ');renderDoc()"></div>'
           + '<div class="f"><label>Model</label>'
           + '<input id="bgi_model_' + i + '" value="' + escQ(it.model) + '" placeholder="VD: SS-1500, GB-750..." '
-          + 'oninput="this.value=this.value.toUpperCase();bgItems[' + i + '].model=this.value;bgLookupModel(' + i + ');renderDoc()" autocomplete="off"></div>'
+          + 'autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" style="text-transform:uppercase" '
+          + 'oninput="bgItems[' + i + '].model=this.value.toUpperCase();bgLookupModel(' + i + ');renderDoc()"></div>'
           + '<div class="f"><label>Xuất xứ</label>'
           + '<select id="bgi_xx_' + i + '" onchange="bgChangeXX(' + i + ',this.value)">' + xxOpts + '</select>'
           + '<input id="bgi_xxc_' + i + '" placeholder="Nhập xuất xứ..." value="' + (xxVal === '__custom__' ? escQ(it.xuatXu) : '')
@@ -1412,13 +1454,13 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
           + 'oninput="bgItems[' + i + '].xuatXu=this.value;renderDoc()"></div>'
           + '<div class="f"><label>Lưu lượng</label>'
           + '<div style="display:grid;grid-template-columns:1fr auto;gap:4px">'
-          + '<input type="text" id="bgi_llnum_' + i + '" value="' + escQ(llNum) + '" placeholder="VD: 30" '
+          + '<input type="text" inputmode="decimal" id="bgi_llnum_' + i + '" value="' + escQ(llNum) + '" placeholder="VD: 30" '
           + 'oninput="bgSetLL(' + i + ')">'
           + '<select id="bgi_llunit_' + i + '" style="width:86px" onchange="bgSetLL(' + i + ')">' + llUnitOpts + '</select>'
           + '</div></div>'
           + '<div class="f"><label>Cột áp</label>'
           + '<div style="display:grid;grid-template-columns:1fr auto;gap:4px">'
-          + '<input type="text" id="bgi_canum_' + i + '" value="' + escQ(caNum) + '" placeholder="VD: 15" '
+          + '<input type="text" inputmode="decimal" id="bgi_canum_' + i + '" value="' + escQ(caNum) + '" placeholder="VD: 15" '
           + 'oninput="bgSetCA(' + i + ')">'
           + '<select id="bgi_caunit_' + i + '" style="width:86px" onchange="bgChangeCaUnit(' + i + ',this.value)">' + caUnitOpts + '</select>'
           + '</div>'
@@ -1427,7 +1469,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
           + 'oninput="bgSetCA(' + i + ')"></div>'
           + '<div class="f"><label>Công suất (KW)</label>'
           + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">'
-          + '<input type="text" id="bgi_kw_' + i + '" value="' + escQ(it.kw || '') + '" placeholder="VD: 1.5" oninput="bgItems[' + i + '].kw=this.value;bgBuildCS(' + i + ');">'
+          + '<input type="text" inputmode="decimal" id="bgi_kw_' + i + '" value="' + escQ(it.kw || '') + '" placeholder="VD: 1.5" oninput="bgItems[' + i + '].kw=this.value;bgBuildCS(' + i + ');">'
           + '<select id="bgi_cs_' + i + '" onchange="bgBuildCS(' + i + ');">'
           + '<option value="1 Pha/220V/50Hz"' + (csPhase === '1 Pha/220V/50Hz' ? ' selected' : '') + '>1 Pha/220V/50Hz</option>'
           + '<option value="3 Pha/380V/50Hz"' + (csPhase === '3 Pha/380V/50Hz' ? ' selected' : '') + '>3 Pha/380V/50Hz</option>'
@@ -1443,10 +1485,10 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
           + '<button class="add-btn" style="margin-top:2px;font-size:9.5pt;padding:5px" onclick="bgAddCustomSpec(' + i + ')">＋ Thêm thông số</button></div>'
           + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;background:#0a1929;border-radius:6px;padding:8px">'
           + '<div><div style="font-size:9pt;color:#aaa;margin-bottom:2px">Số lượng</div>'
-          + '<input type="text" id="bgi_sl_' + i + '" value="' + it.sl + '" placeholder="VD: 2" style="width:100%;background:#0d2035;color:#fff;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt" '
+          + '<input type="text" inputmode="numeric" id="bgi_sl_' + i + '" value="' + it.sl + '" placeholder="VD: 2" style="width:100%;background:#0d2035;color:#fff;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt" '
           + 'oninput="bgSetSL(' + i + ')"></div>'
           + '<div><div style="font-size:9pt;color:#aaa;margin-bottom:2px">Đơn giá (đ)</div>'
-          + '<input type="text" id="bgi_gia_' + i + '" value="' + it.gia + '" placeholder="VD: 5000000" style="width:100%;background:#0d2035;color:#fff;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt" '
+          + '<input type="text" inputmode="numeric" id="bgi_gia_' + i + '" value="' + it.gia + '" placeholder="VD: 5000000" style="width:100%;background:#0d2035;color:#fff;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt" '
           + 'oninput="bgSetGia(' + i + ')"></div>'
           + '<div><div style="font-size:9pt;color:#aaa;margin-bottom:2px">Thành tiền</div>'
           + '<input id="bgi_tt_' + i + '" readonly value="' + fmt(it.sl * it.gia) + '" style="width:100%;background:#0d1e30;color:#f39c12;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt;font-weight:700"></div>'
