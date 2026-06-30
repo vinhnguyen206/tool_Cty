@@ -869,7 +869,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
         + 'Tài khoản: <b>' + he(bgG('benB_stk')) + '</b> tại <b>' + he(bgG('benB_nh')) + '</b></div>'
         + '<div class="sig-row mt40"><div class="sig-col"><div class="sig-title">XÁC NHẬN ĐẶT HÀNG</div><div class="sig-sub">(Ký, họ tên, đóng dấu)</div><div class="sig-space"></div></div>'
         + '<div class="sig-col"><div class="sig-title">ĐẠI DIỆN BÊN BÁN</div><div class="sig-sub">(Ký, họ tên, đóng dấu)</div>'
-        + '<img src="' + SIG_IMG + '" style="height:180px;max-width:450px;object-fit:contain;display:block;margin:4px auto">'
+        + '<img class="bgDocImg" data-img="sig" style="height:180px;max-width:450px;object-fit:contain;display:block;margin:4px auto">'
         + '</div></div>'
         + '</div>';
     }
@@ -914,7 +914,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
         + 'Tài khoản: <b>235 168 168</b> tại <b>Ngân hàng Á Châu (ACB) - CN Đông Đô</b></div>'
         + '<div class="sig-row mt40"><div class="sig-col"><div class="sig-title">XÁC NHẬN ĐẶT HÀNG</div><div class="sig-sub">(Ký, họ tên, đóng dấu)</div><div class="sig-space"></div></div>'
         + '<div class="sig-col"><div class="sig-title">ĐẠI DIỆN BÊN BÁN</div><div class="sig-sub">(Ký, họ tên, đóng dấu)</div>'
-        + '<img src="' + STAMP_IMG + '" style="height:180px;max-width:450px;object-fit:contain;display:block;margin:4px auto">'
+        + '<img class="bgDocImg" data-img="stamp" style="height:180px;max-width:450px;object-fit:contain;display:block;margin:4px auto">'
         + '</div></div>'
         + '</div>';
     }
@@ -926,7 +926,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
         + '.doc-table td{border:1.5px solid #000 !important}'
         + '@media print{@page{size:A4;margin:10mm 15mm}}';
       var w = window.open('', '_blank');
-      w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bao_Gia</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Times New Roman",Times,serif;font-size:12pt;color:#000}.doc-page{padding:15px 20px;max-width:750px;margin:0 auto}.center{text-align:center}.bold{font-weight:700}.italic{font-style:italic}.right{text-align:right}.underline{text-decoration:underline}.mt4{margin-top:4px}.mt8{margin-top:8px}.mt10{margin-top:10px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}.mt28{margin-top:28px}.mt40{margin-top:40px}.quoc-hieu{text-align:center;margin-bottom:6px}.qh1{font-size:13pt;font-weight:700;text-transform:uppercase}.qh2{font-size:11pt;font-weight:700}.qh3{font-size:10pt}.doc-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt}.doc-table th{background:#1a4fa0;color:#fff;padding:5px 6px;text-align:center;border:1px solid #1a4fa0}.doc-table td{border:1px solid #888;padding:4px 6px;vertical-align:middle}.doc-table td.tdnum{text-align:right}.doc-table td.tdc{text-align:center}.doc-table tr.sum-row td{font-weight:700;background:#eef}.doc-table tr.grand-row td{font-weight:700;background:#ddf;font-size:10.5pt}.sig-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;margin-top:24px;font-size:10pt}.sig-row.three{grid-template-columns:1fr 1fr 1fr}.sig-col .sig-title{font-weight:700;margin-bottom:2px}.sig-col .sig-sub{font-style:italic;font-size:9.5pt;color:#555}.sig-col .sig-space{min-height:55px}.pt-info-table{width:100%;border-collapse:collapse;font-size:10.5pt}.pt-info-table td{padding:3px 4px}@media print{@page{size:A4;margin:10mm}}' + css + '</style></head><body>' + docBaoGia() + '</body></html>');
+      w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bao_Gia</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Times New Roman",Times,serif;font-size:12pt;color:#000}.doc-page{padding:15px 20px;max-width:750px;margin:0 auto}.center{text-align:center}.bold{font-weight:700}.italic{font-style:italic}.right{text-align:right}.underline{text-decoration:underline}.mt4{margin-top:4px}.mt8{margin-top:8px}.mt10{margin-top:10px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}.mt28{margin-top:28px}.mt40{margin-top:40px}.quoc-hieu{text-align:center;margin-bottom:6px}.qh1{font-size:13pt;font-weight:700;text-transform:uppercase}.qh2{font-size:11pt;font-weight:700}.qh3{font-size:10pt}.doc-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt}.doc-table th{background:#1a4fa0;color:#fff;padding:5px 6px;text-align:center;border:1px solid #1a4fa0}.doc-table td{border:1px solid #888;padding:4px 6px;vertical-align:middle}.doc-table td.tdnum{text-align:right}.doc-table td.tdc{text-align:center}.doc-table tr.sum-row td{font-weight:700;background:#eef}.doc-table tr.grand-row td{font-weight:700;background:#ddf;font-size:10.5pt}.sig-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;margin-top:24px;font-size:10pt}.sig-row.three{grid-template-columns:1fr 1fr 1fr}.sig-col .sig-title{font-weight:700;margin-bottom:2px}.sig-col .sig-sub{font-style:italic;font-size:9.5pt;color:#555}.sig-col .sig-space{min-height:55px}.pt-info-table{width:100%;border-collapse:collapse;font-size:10.5pt}.pt-info-table td{padding:3px 4px}@media print{@page{size:A4;margin:10mm}}' + css + '</style></head><body>' + bgDocInlineImages() + '</body></html>');
       w.document.close();
       setTimeout(function () { w.print(); }, 400);
     }
@@ -1446,7 +1446,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
           + '<div class="f"><label>Model</label>'
           + '<input id="bgi_model_' + i + '" value="' + escQ(it.model) + '" placeholder="VD: SS-1500, GB-750..." '
           + 'autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" style="text-transform:uppercase" '
-          + 'oninput="bgItems[' + i + '].model=this.value.toUpperCase();bgLookupModel(' + i + ');renderDoc()"></div>'
+          + 'oninput="bgItems[' + i + '].model=this.value.toUpperCase();bgScheduleRender(' + i + ')"></div>'
           + '<div class="f"><label>Xuất xứ</label>'
           + '<select id="bgi_xx_' + i + '" onchange="bgChangeXX(' + i + ',this.value)">' + xxOpts + '</select>'
           + '<input id="bgi_xxc_' + i + '" placeholder="Nhập xuất xứ..." value="' + (xxVal === '__custom__' ? escQ(it.xuatXu) : '')
@@ -1497,6 +1497,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
     }
 
     function saveFile() {
+      renderDocNow(); // dựng bản mới nhất (kèm ảnh) trước khi lưu, tránh trễ 1 nhịp rAF
       var html = document.documentElement.outerHTML;
       var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
       var a = document.createElement('a');
@@ -1557,9 +1558,43 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       el = document.getElementById('bg_nam'); if (el && !el.value) el.value = yyyy;
     }
 
-    function renderDoc() {
+    // ===== Render preview tối ưu cho điện thoại =====
+    // Gom mọi lần gọi trong cùng một khung hình (requestAnimationFrame) thành 1 lần dựng,
+    // và dò mã (PRICE_DB) cũng chỉ chạy 1 lần/khung -> gõ phím không bị nghẽn, bàn phím không nháy.
+    var _bgRAF = null;
+    var _bgPendingLookup = null;
+
+    function renderDocNow() {
       var area = document.getElementById('docArea');
-      if (area) area.innerHTML = docBaoGia();
+      if (!area) return;
+      area.innerHTML = docBaoGia();
+      // Gán ảnh chữ ký/con dấu SAU khi dựng (không nhúng base64 ~590KB vào chuỗi mỗi lần render)
+      var imgs = area.querySelectorAll('img.bgDocImg');
+      for (var k = 0; k < imgs.length; k++) {
+        var src = imgs[k].getAttribute('data-img') === 'stamp' ? STAMP_IMG : SIG_IMG;
+        if (imgs[k].getAttribute('src') !== src) imgs[k].src = src;
+      }
+    }
+
+    // Lên lịch dò mã (tuỳ chọn) + render trong 1 nhịp rAF kế tiếp
+    function bgScheduleRender(lookupIndex) {
+      if (lookupIndex != null) _bgPendingLookup = lookupIndex;
+      if (_bgRAF) return;
+      _bgRAF = requestAnimationFrame(function () {
+        _bgRAF = null;
+        if (_bgPendingLookup != null) { var li = _bgPendingLookup; _bgPendingLookup = null; bgLookupModel(li); }
+        renderDocNow();
+      });
+    }
+
+    // Giữ tên cũ renderDoc làm "bản gom nhịp" để mọi nơi đang gọi đều được tối ưu
+    function renderDoc() { bgScheduleRender(null); }
+
+    // Bản báo giá có NHÚNG ảnh base64 inline — dùng cho In/PDF (cửa sổ mới không chạy renderDocNow)
+    function bgDocInlineImages() {
+      return docBaoGia()
+        .replace('data-img="sig"', 'data-img="sig" src="' + SIG_IMG + '"')
+        .replace('data-img="stamp"', 'data-img="stamp" src="' + STAMP_IMG + '"');
     }
 
     // ===== INIT =====
