@@ -1499,11 +1499,37 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       renderDoc();
     }
 
+    // Xuất xứ -> hãng tương ứng (để lấy giá tối thiểu theo hãng)
+    function bgXuatXuToBrand(xx) {
+      if (xx === 'Trung Quốc') return 'redpump';
+      if (xx === 'Italy') return 'aquaris';
+      if (xx === 'Đài Loan') return 'perotac';
+      return null; // xuất xứ tự nhập -> không có hãng để đổi giá
+    }
+    // Khi đổi xuất xứ: cập nhật giá theo giá tối thiểu của hãng đó.
+    // Dòng máy chỉ có 1 giá (hãng khác = 0) thì GIỮ NGUYÊN giá hiện tại.
+    function bgUpdateGiaByXuatXu(i) {
+      var it = bgItems[i];
+      var brand = bgXuatXuToBrand(it.xuatXu);
+      if (!brand) return;
+      var found = it._found || priceDbLookup(it.model);
+      if (!found) return;
+      var p = brand === 'redpump' ? found.giaRedpump : brand === 'aquaris' ? found.giaAquaris : found.giaPerotac;
+      p = +p || 0;
+      if (p > 0) { // chỉ đổi khi hãng đó có giá; dòng 1 giá duy nhất thì để nguyên
+        it.gia = p;
+        it.giaEdited = false;
+        var el = document.getElementById('bgi_gia_' + i); if (el) el.value = p;
+        var tt = document.getElementById('bgi_tt_' + i); if (tt) tt.value = fmt(it.sl * it.gia);
+      }
+    }
+
     function bgChangeXX(i, val) {
       var cus = document.getElementById('bgi_xxc_' + i);
       if (val === '__custom__') { if (cus) { cus.style.display = ''; cus.focus(); } bgItems[i].xuatXu = cus ? cus.value : ''; }
       else { if (cus) cus.style.display = 'none'; bgItems[i].xuatXu = val; }
-      renderDoc();
+      bgUpdateGiaByXuatXu(i);
+      bgRecalc();
     }
 
     function bgChangeCaUnit(i, val) {
