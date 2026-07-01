@@ -191,6 +191,24 @@
       resize: vertical
     }
 
+    .stp {
+      background: #0d2035;
+      color: #7fd1a0;
+      border: 1px solid #2a3a50;
+      border-radius: 4px;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      min-width: 30px;
+      padding: 4px 0;
+      user-select: none
+    }
+
+    .stp:active {
+      background: #16324d
+    }
+
     .r2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -802,6 +820,13 @@
               <option value="10">10%</option>
             </select>
           </div>
+          <div class="f"><label>Chiết khấu % <span style="color:#e67e22;font-weight:400">(ẩn — chỉ trừ vào tổng, tối đa 10%)</span></label>
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px">
+              <button type="button" class="stp" onclick="bgStepCK(-1,event)" ontouchend="bgStepCK(-1,event)">−</button>
+              <input type="text" inputmode="decimal" id="bg_ck" value="0" style="text-align:center" oninput="bgClampCK();bgRecalc()">
+              <button type="button" class="stp" onclick="bgStepCK(1,event)" ontouchend="bgStepCK(1,event)">＋</button>
+            </div>
+          </div>
           <div class="f"><label>Ghi chú giao hàng</label>
             <textarea id="bg_ghiChu" rows="5" oninput="renderDoc()">Giá trên đã bao gồm VAT
 Giao hàng trong vòng 1 ngày
@@ -848,6 +873,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
         <button class="add-btn" onclick="bgAddItem()">＋ Thêm thiết bị</button>
         <div class="totals-sb" style="margin-top:10px">
           <div class="tr"><span>Tổng tiền hàng:</span><span id="bg_mSub">0 đ</span></div>
+          <div class="tr" id="bg_mCKrow" style="display:none;color:#e67e22"><span>Chiết khấu (ẩn):</span><span id="bg_mCK">0 đ</span></div>
           <div class="tr"><span id="bg_mVatLbl">VAT (8%):</span><span id="bg_mVat">0 đ</span></div>
           <div class="tr grand"><span>Tổng thanh toán:</span><span id="bg_mTotal">0 đ</span></div>
         </div>
@@ -936,20 +962,57 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
 
     function bgCalc() {
       var vr = +(document.getElementById('bg_vat') ? document.getElementById('bg_vat').value : 8) / 100;
-      var sub = bgItems.reduce(function (s, it) { return s + it.sl * it.gia; }, 0);
+      var ckEl = document.getElementById('bg_ck');
+      var ck = ckEl ? Math.min(10, Math.max(0, parseFloat(ckEl.value) || 0)) : 0;
+      var subFull = bgItems.reduce(function (s, it) { return s + it.sl * it.gia; }, 0);
+      var ckAmt = Math.round(subFull * ck / 100);
+      var sub = subFull - ckAmt;                 // tiền hàng SAU chiết khấu (chiết khấu ẩn, không hiện trên báo giá)
       var vat = Math.round(sub * vr);
       var grand = sub + vat;
       document.getElementById('bg_mSub').textContent = fmt(sub) + ' đ';
       document.getElementById('bg_mVatLbl').textContent = 'VAT (' + (document.getElementById('bg_vat').value) + '%):';
       document.getElementById('bg_mVat').textContent = fmt(vat) + ' đ';
       document.getElementById('bg_mTotal').textContent = fmt(grand) + ' đ';
-      return { sub: sub, vat: vat, grand: grand, vr: vr };
+      var ckRow = document.getElementById('bg_mCKrow');
+      if (ckRow) ckRow.style.display = ck > 0 ? '' : 'none';
+      var ckEl2 = document.getElementById('bg_mCK'); if (ckEl2) ckEl2.textContent = '- ' + fmt(ckAmt) + ' đ (' + ck + '%)';
+      return { sub: sub, vat: vat, grand: grand, vr: vr, ck: ck, ckAmt: ckAmt, subFull: subFull };
     }
 
     // Notice we do NOT render items in recalc, avoiding input focus loss!
     function bgRecalc() {
       bgCalc();
       renderDoc();
+    }
+
+    // ===== Nút cộng/trừ (stepper) =====
+    function bgClampCK() {
+      var el = document.getElementById('bg_ck'); if (!el) return;
+      var v = parseFloat(el.value); if (isNaN(v)) return;
+      if (v > 10) el.value = 10; else if (v < 0) el.value = 0;
+    }
+    // Chặn "ghost click" trên điện thoại: touchend đã xử lý thì chặn click giả tiếp theo (tránh cộng 2 lần)
+    function bgStepPD(ev) { if (ev && ev.type === 'touchend' && ev.cancelable) { try { ev.preventDefault(); } catch (e) { } } }
+    function bgStepCK(dir, ev) {
+      bgStepPD(ev);
+      var el = document.getElementById('bg_ck'); if (!el) return;
+      var v = (parseFloat(el.value) || 0) + dir;
+      v = Math.min(10, Math.max(0, v));
+      el.value = v; bgRecalc();
+    }
+    function bgStepSL(i, dir, ev) {
+      bgStepPD(ev);
+      var el = document.getElementById('bgi_sl_' + i); if (!el) return;
+      var v = (parseInt(String(el.value).replace(/[^0-9]/g, ''), 10) || 1) + dir;
+      el.value = Math.max(1, v); bgSetSL(i);
+    }
+    // Đơn giá: dưới 30tr bước 100.000; từ 30tr trở lên bước 500.000
+    function bgStepGia(i, dir, ev) {
+      bgStepPD(ev);
+      var el = document.getElementById('bgi_gia_' + i); if (!el) return;
+      var v = parseInt(String(el.value).replace(/[^0-9]/g, ''), 10) || 0;
+      var step = v >= 30000000 ? 500000 : 100000;
+      el.value = Math.max(0, v + dir * step); bgSetGia(i);
     }
 
     function bgNgay() {
@@ -972,38 +1035,61 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       return parts ? '<div style="font-size:10.5pt;margin-bottom:10px;line-height:1.45">' + parts + '</div>' : '';
     }
 
+    // Bản xem trước dựng BÁM SÁT file Excel xuất ra (mẫu Trung Kiên)
     function docBaoGiaTK() {
       var t = bgCalc();
+      var vatPct = document.getElementById('bg_vat').value;
+      var TH = 'padding:5px 6px;text-align:center;vertical-align:middle;border:1.5px solid #000;background:#D9E1F2;color:#000;font-weight:700';
       var rows = bgItems.map(function (it, i) {
-        var specs = bgSpecsList(it).map(function (s) { return he(s); }).join('<br>');
+        var specArr = bgSpecsList(it);
+        var nb = specArr.length ? ';border-bottom:1px solid #000' : '';
+        var specDivs = specArr.map(function (s, idx) {
+          var last = idx === specArr.length - 1;
+          return '<div style="padding:3px 6px' + (last ? '' : ';border-bottom:1px solid #000') + '">' + he(s) + '</div>';
+        }).join('');
         return '<tr><td class="tdc">' + (i + 1) + '</td>'
-          + '<td><b>' + he(it.ten) + '</b>' + (specs ? '<br><span style="font-size:10pt;color:#333">' + specs + '</span>' : '') + '</td>'
-          + '<td class="tdc">' + it.sl + '</td><td class="tdnum">' + fmt(it.gia) + '</td>'
-          + '<td class="tdnum">' + fmt(it.sl * it.gia) + '</td></tr>';
+          + '<td style="padding:0;text-align:left"><div style="font-weight:700;padding:3px 6px' + nb + '">' + he(it.ten) + '</div>' + specDivs + '</td>'
+          + '<td class="tdc">' + it.sl + '</td>'
+          + '<td class="tdc">' + fmt(it.gia) + '</td>'
+          + '<td class="tdc">' + fmt(it.sl * it.gia) + '</td></tr>';
       }).join('');
+      var kh = bgG('bg_khachHang');
+      var greet = kh
+        ? 'Kính gửi: ' + he(kh) + (bgG('bg_dcKH') ? ' - ' + he(bgG('bg_dcKH')) : '') + (bgG('bg_dtKH') ? ' - ĐT: ' + he(bgG('bg_dtKH')) : '')
+        : 'Kính gửi quý công ty báo giá sản phẩm có thông số như sau:';
+      var pay = 'Thông tin thanh toán:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Chuyển khoản Công ty:<br>'
+        + '&nbsp;&nbsp;&nbsp;&nbsp;Tên TK: ' + he(bgG('benB_ten')) + '<br>'
+        + '&nbsp;&nbsp;&nbsp;&nbsp;Số TK: ' + he(bgG('benB_stk')) + '<br>'
+        + '&nbsp;&nbsp;&nbsp;&nbsp;Tại: ' + he(bgG('benB_nh')) + '<br>'
+        + 'Rất mong với báo giá này thỏa mãn được yêu cầu của quý khách và sớm nhận được hợp tác';
       return '<div class="doc-page" style="font-family:\'Times New Roman\',Times,serif;color:#000">'
-        + '<div style="margin-bottom:10px">'
+        + '<div style="text-align:right;margin-bottom:8px">'
         + '<div style="font-size:12pt;font-weight:700">' + he(bgG('benB_ten')) + '</div>'
-        + '<div style="font-size:10pt;margin-top:2px">Địa Chỉ: ' + he(bgG('benB_dc')) + '</div>'
+        + '<div style="font-size:10pt">Địa Chỉ: ' + he(bgG('benB_dc')) + '</div>'
         + '<div style="font-size:10pt">Tel: ' + he(bgG('benB_dt')) + '</div>'
         + '</div>'
-        + '<div class="center mt20" style="font-size:22pt;font-weight:700;color:#ff0000;text-transform:none">Bảng Chào Giá Thiết Bị</div>'
-        + '<div style="font-size:10pt;margin-top:12px;margin-bottom:12px">&nbsp;&nbsp;&nbsp;Ngày báo giá: <span style="font-weight:normal;color:#000;margin-left:50px">' + bgNgay() + '</span></div>'
-        + '<div style="font-size:10pt;color:#000;margin-bottom:12px">Kính gửi quý công ty báo giá sản phẩm có thông số kỹ thuật chi tiết như sau:</div>'
-        + bgKhBlockHTML()
-        + '<table class="doc-table"><thead><tr>'
-        + '<th style="width:6%">STT</th><th>Mô tả quy cách thiết bị</th><th style="width:8%">SL</th><th style="width:14%">Đơn giá (đ)</th><th style="width:15%">Thành tiền (đ)</th>'
+        + '<div class="center" style="font-size:22pt;font-weight:700;color:#ff0000;margin:6px 0">Bảng Chào Giá Thiết Bị</div>'
+        + '<div style="font-size:10pt;font-weight:700;color:#C00000;margin:8px 0">&nbsp;&nbsp;&nbsp;Ngày báo giá: ' + bgNgay() + '</div>'
+        + '<div style="font-size:10pt;margin-bottom:8px">' + greet + '</div>'
+        + '<div style="font-size:12pt;font-weight:700;margin:6px 0 3px">Thông tin thiết bị</div>'
+        + '<table class="doc-table" style="font-family:Calibri,Arial,sans-serif;font-size:10pt"><thead><tr>'
+        + '<th style="width:6%;' + TH + '">STT</th>'
+        + '<th style="' + TH + '">Thông số thiết bị</th>'
+        + '<th style="width:9%;' + TH + '">Số<br>lượng</th>'
+        + '<th style="width:15%;' + TH + '">Giá tiền<br>(VND)</th>'
+        + '<th style="width:16%;' + TH + '">Thành tiền<br>(VND)</th>'
         + '</tr></thead><tbody>' + rows
-        + '<tr class="sum-row"><td colspan="3" style="text-align:right">Tổng tiền hàng:</td><td></td><td class="tdnum">' + fmt(t.sub) + '</td></tr>'
-        + '<tr class="sum-row"><td colspan="3" style="text-align:right">Thuế VAT (' + (document.getElementById('bg_vat').value) + '%):</td><td></td><td class="tdnum">' + fmt(t.vat) + '</td></tr>'
-        + '<tr class="grand-row"><td colspan="3" style="text-align:right">Tổng cộng thanh toán:</td><td></td><td class="tdnum">' + fmt(t.grand) + '</td></tr>'
+        + '<tr><td colspan="4" class="tdc" style="font-weight:700">Tổng cộng</td><td class="tdc" style="font-weight:700">' + fmt(t.sub) + '</td></tr>'
+        + '<tr><td colspan="4" class="tdc" style="font-weight:700">VAT ' + vatPct + '%</td><td class="tdc" style="font-weight:700">' + fmt(t.vat) + '</td></tr>'
+        + '<tr><td colspan="4" class="tdc" style="font-weight:700">Tổng cộng</td><td class="tdc" style="font-weight:700">' + fmt(t.grand) + '</td></tr>'
         + '</tbody></table>'
-        + '<div style="font-size:10pt;margin-top:6px;font-style:italic">Bằng chữ: <b>' + toWords(t.grand) + '</b></div>'
-        + '<div style="font-size:11pt;margin-top:12px;font-weight:700">GHI CHÚ GIAO HÀNG :</div>'
-        + '<div style="font-size:10.5pt;white-space:pre-wrap;line-height:1.45">' + he(bgG('bg_ghiChu')) + '</div>'
-        + '<div style="font-size:10.5pt;margin-top:8px">Đơn vị thụ hưởng: <b>' + he(bgG('benB_ten')) + '</b><br>'
-        + 'Tài khoản: <b>' + he(bgG('benB_stk')) + '</b> tại <b>' + he(bgG('benB_nh')) + '</b></div>'
-        + '<div class="sig-row mt40"><div class="sig-col"><div class="sig-title">XÁC NHẬN ĐẶT HÀNG</div><div class="sig-sub">(Ký, họ tên, đóng dấu)</div><div class="sig-space"></div></div>'
+        + '<div style="font-size:12pt;font-weight:700;margin-top:10px">Ghi chú:</div>'
+        + '<div style="font-size:10pt;white-space:pre-wrap;line-height:1.4">' + he(bgG('bg_ghiChu')) + '</div>'
+        + '<div style="font-size:12pt;font-weight:700;margin-top:8px">Phương Thức Thanh Toán Và Giao Hàng</div>'
+        + '<div style="font-size:10pt">Thanh toán: 100%&nbsp;&nbsp;Ngay khi nhận hàng</div>'
+        + '<div style="font-size:9pt;line-height:1.4;margin-top:2px">' + pay + '</div>'
+        + '<div class="center" style="font-size:10pt;margin-top:4px">Rất mong nhận được phản hồi từ quý công ty</div>'
+        + '<div class="sig-row mt20"><div class="sig-col"><div class="sig-title">XÁC NHẬN ĐẶT HÀNG</div><div class="sig-sub">(Ký, họ tên, đóng dấu)</div><div class="sig-space"></div></div>'
         + '<div class="sig-col"><div class="sig-title">ĐẠI DIỆN BÊN BÁN</div><div class="sig-sub">(Ký, họ tên, đóng dấu)</div>'
         + (bgShowSig() ? '<img class="bgDocImg" data-img="sig" style="height:180px;max-width:450px;object-fit:contain;display:block;margin:4px auto">' : '')
         + '</div></div>'
@@ -1320,24 +1406,32 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       var ws = {}, merges = [], rows = [];
       var vatPct = (document.getElementById('bg_vat') ? document.getElementById('bg_vat').value : '8');
 
+      // Tiêu đề / ghi chú: Times New Roman (giống mẫu)
       var fHdrName = { font: { name: BG_TNR, sz: 12, bold: true }, alignment: { horizontal: 'right' } };
       var fHdrSub = { font: { name: BG_TNR, sz: 10 }, alignment: { horizontal: 'right' } };
-      var fTitle = { font: { name: BG_TNR, sz: 22, bold: true }, alignment: { horizontal: 'center', vertical: 'center' } };
-      var fLabelB = { font: { name: BG_TNR, sz: 10, bold: true } };
-      var fGreet = { font: { name: BG_TNR, sz: 10, italic: true }, alignment: { horizontal: 'left', vertical: 'top', wrapText: true } };
-      var fSecHd = { font: { name: BG_TNR, sz: 12, bold: true, italic: true }, alignment: { horizontal: 'left' }, border: { bottom: BG_THIN } };
-      var thHd = { font: { name: BG_TNR, sz: 10, bold: true }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: BG_BORDER, fill: BG_HFILL };
-      var tdName = { font: { name: BG_TNR, sz: 10, bold: true }, alignment: { horizontal: 'left', vertical: 'center', wrapText: true }, border: BG_BORDER };
-      var tdSpec = { font: { name: BG_TNR, sz: 10 }, alignment: { horizontal: 'left', vertical: 'center', wrapText: true }, border: BG_BORDER };
-      var tdC = { font: { name: BG_TNR, sz: 10 }, alignment: { horizontal: 'center', vertical: 'center' }, border: BG_BORDER };
-      var tdNum = { font: { name: BG_TNR, sz: 10 }, alignment: { horizontal: 'center', vertical: 'center' }, border: BG_BORDER, numFmt: BG_ACC };
-      var tdSumL = { font: { name: BG_TNR, sz: 10, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: BG_BORDER };
-      var tdSumN = { font: { name: BG_TNR, sz: 10, bold: true }, alignment: { horizontal: 'right', vertical: 'center' }, border: BG_BORDER, numFmt: BG_ACC };
+      var fTitle = { font: { name: BG_TNR, sz: 22, bold: true, color: { rgb: 'FFFF0000' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+      var fDay = { font: { name: BG_TNR, sz: 10, bold: true, color: { rgb: 'FFC00000' } }, alignment: { horizontal: 'left' } };
+      var fGreet = { font: { name: BG_TNR, sz: 10 }, alignment: { horizontal: 'left', vertical: 'top', wrapText: true } };
+      var fSecHd = { font: { name: BG_TNR, sz: 12, bold: true }, alignment: { horizontal: 'left' } };
       var fNote = { font: { name: BG_TNR, sz: 10 }, alignment: { horizontal: 'left', vertical: 'top', wrapText: true } };
       var fNote9 = { font: { name: BG_TNR, sz: 9 }, alignment: { horizontal: 'left', vertical: 'top', wrapText: true } };
       var fCenter = { font: { name: BG_TNR, sz: 10 }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
-      var fSecIt = { font: { name: BG_TNR, sz: 12, bold: true, italic: true } };
       var fSign = { font: { name: BG_TNR, sz: 11, bold: true }, alignment: { horizontal: 'center' } };
+      var fSignL = { font: { name: BG_TNR, sz: 11, bold: true } };
+      // Bảng: Calibri 10 (giống hệt mẫu)
+      var thHd = { font: { name: 'Calibri', sz: 10 }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: BG_BORDER, fill: BG_HFILL };
+      var tdName = { font: { name: 'Calibri', sz: 10, bold: true }, alignment: { horizontal: 'left', vertical: 'center', wrapText: true }, border: BG_BORDER };
+      var tdSpec = { font: { name: 'Calibri', sz: 10 }, alignment: { horizontal: 'left', vertical: 'center', wrapText: true }, border: BG_BORDER };
+      var tdC = { font: { name: 'Calibri', sz: 10 }, alignment: { horizontal: 'center', vertical: 'center' }, border: BG_BORDER };
+      var tdNum = { font: { name: 'Calibri', sz: 10 }, alignment: { horizontal: 'center', vertical: 'center' }, border: BG_BORDER, numFmt: '#,##0' };
+      var tdSumL = { font: { name: 'Calibri', sz: 10, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: BG_BORDER };
+      var tdSumN = { font: { name: 'Calibri', sz: 10, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: BG_BORDER, numFmt: '#,##0' };
+      // Chiều cao dòng theo số dòng chữ thực tế (per = số ký tự/dòng của ô) -> không cắt chữ / nhảy dòng
+      function rowH(text, per) {
+        per = per || 32; text = String(text || ''); var lines = 0;
+        text.split('\n').forEach(function (s) { lines += Math.max(1, Math.ceil(s.length / per)); });
+        return 13.6 * Math.max(1, lines) + 4;
+      }
 
       // Tiêu đề công ty (canh phải)
       bgCell(ws, 0, 0, bgG('benB_ten'), fHdrName); bgMerge(merges, 0, 0, 0, 8);
@@ -1345,8 +1439,8 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       bgCell(ws, 2, 0, 'Tel: ' + bgG('benB_dt'), fHdrSub); bgMerge(merges, 2, 0, 2, 8);
       rows[3] = { hpt: 4 };
       bgCell(ws, 4, 0, 'Bảng Chào Giá Thiết Bị', fTitle); bgMerge(merges, 4, 0, 5, 8); rows[4] = { hpt: 28 };
-      bgCell(ws, 7, 0, '   Ngày báo giá: ', fLabelB);
-      bgCell(ws, 7, 2, bgNgay(), { font: { name: BG_TNR, sz: 10, bold: true }, alignment: { horizontal: 'left' } }); bgMerge(merges, 7, 2, 7, 4);
+      bgCell(ws, 7, 0, '   Ngày báo giá: ', fDay);
+      bgCell(ws, 7, 2, bgNgay(), fDay); bgMerge(merges, 7, 2, 7, 4);
       var greet = bgG('bg_khachHang')
         ? ('Kính gửi: ' + bgG('bg_khachHang') + (bgG('bg_dcKH') ? ' - ' + bgG('bg_dcKH') : '') + (bgG('bg_dtKH') ? ' - ĐT: ' + bgG('bg_dtKH') : ''))
         : 'Kính gửi quý công ty báo giá sản phẩm có thông số như sau:';
@@ -1360,6 +1454,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       bgCell(ws, 11, 5, 'Số\nlượng', thHd); bgMerge(merges, 11, 5, 12, 5);
       bgCell(ws, 11, 6, 'Giá tiền', thHd); bgCell(ws, 12, 6, 'VND', thHd);
       bgCell(ws, 11, 7, 'Thành tiền', thHd); bgCell(ws, 12, 7, 'VND', thHd);
+      rows[11] = { hpt: 15.8 }; rows[12] = { hpt: 15.8 };
 
       // Các dòng thiết bị
       var r = 13;
@@ -1379,11 +1474,12 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
         bgMerge(merges, r0, 0, rEnd, 0); bgMerge(merges, r0, 5, rEnd, 5);
         bgMerge(merges, r0, 6, rEnd, 6); bgMerge(merges, r0, 7, rEnd, 7);
         bgFillBox(ws, r0, 1, r0, 4, tdName); bgCell(ws, r0, 1, it.ten, tdName); bgMerge(merges, r0, 1, r0, 4);
+        rows[r0] = { hpt: rowH(it.ten) };
         specs.forEach(function (sp, si) {
           var rr = r0 + 1 + si;
           bgFillBox(ws, rr, 1, rr, 4, tdSpec); bgCell(ws, rr, 1, sp, tdSpec); bgMerge(merges, rr, 1, rr, 4);
+          rows[rr] = { hpt: rowH(sp) };
         });
-        for (var k = r0; k <= rEnd; k++) rows[k] = { hpt: 17 };
         r = rEnd + 1;
       });
 
@@ -1392,17 +1488,17 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       bgFillBox(ws, r, 0, r, 6, tdSumL); bgCell(ws, r, 0, 'VAT ' + vatPct + '%', tdSumL); bgMerge(merges, r, 0, r, 6); bgCell(ws, r, 7, t.vat, tdSumN, true); r++;
       bgFillBox(ws, r, 0, r, 6, tdSumL); bgCell(ws, r, 0, 'Tổng cộng', tdSumL); bgMerge(merges, r, 0, r, 6); bgCell(ws, r, 7, t.grand, tdSumN, true); r++;
 
-      bgCell(ws, r, 0, 'Ghi chú:', fSecIt); r++;
-      bgCell(ws, r, 0, bgG('bg_ghiChu'), fNote); bgMerge(merges, r, 0, r, 7); rows[r] = { hpt: 48 }; r++;
-      bgCell(ws, r, 0, 'Phương Thức Thanh Toán Và Giao Hàng', fSecIt); r++;
-      bgCell(ws, r, 0, 'Thanh toán: 100%  Ngay khi nhận hàng', fNote); r++;
+      bgCell(ws, r, 0, 'Ghi chú:', fSecHd); r++;
+      bgCell(ws, r, 0, bgG('bg_ghiChu'), fNote); bgMerge(merges, r, 0, r, 7); rows[r] = { hpt: rowH(bgG('bg_ghiChu'), 68) }; r++;
+      bgCell(ws, r, 0, 'Phương Thức Thanh Toán Và Giao Hàng', fSecHd); r++;
+      bgCell(ws, r, 0, 'Thanh toán: 100%  Ngay khi nhận hàng', { font: { name: BG_TNR, sz: 10 }, alignment: { horizontal: 'left' } }); r++;
       var pay = 'Thông tin thanh toán:\n               Chuyển khoản Công ty:\n          Tên TK: ' + bgG('benB_ten') +
         '\n          Số TK: ' + bgG('benB_stk') + '\n          Tại: ' + bgG('benB_nh') +
         '\nRất mong với báo giá này thỏa mãn được yêu cầu của quý khách và sớm nhận được hợp tác';
-      bgCell(ws, r, 0, pay, fNote9); bgMerge(merges, r, 0, r, 7); rows[r] = { hpt: 84 }; r++;
+      bgCell(ws, r, 0, pay, fNote9); bgMerge(merges, r, 0, r, 7); rows[r] = { hpt: rowH(pay, 68) }; r++;
       bgCell(ws, r, 0, 'Rất mong nhận được phản hồi từ quý công ty', fCenter); bgMerge(merges, r, 0, r, 7); r++;
       rows[r] = { hpt: 6 }; r++;
-      bgCell(ws, r, 0, '     XÁC NHẬN ĐẶT HÀNG ', { font: { name: BG_TNR, sz: 11, bold: true } });
+      bgCell(ws, r, 0, '     XÁC NHẬN ĐẶT HÀNG ', fSignL);
       bgCell(ws, r, 4, 'ĐẠI DIỆN BÊN BÁN', fSign); bgMerge(merges, r, 4, r, 7);
 
       var cols = [{ wch: 5 }, { wch: 9.1 }, { wch: 5.4 }, { wch: 7 }, { wch: 9.9 }, { wch: 7.6 }, { wch: 11.4 }, { wch: 13.4 }, { wch: 12.7 }];
@@ -1923,16 +2019,20 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
               + '</div>';
           }).join('')
           + '<button class="add-btn" style="margin-top:2px;font-size:9.5pt;padding:5px" onclick="bgAddCustomSpec(' + i + ')">＋ Thêm thông số</button></div>'
-          + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;background:#0a1929;border-radius:6px;padding:8px">'
-          + '<div><div style="font-size:9pt;color:#aaa;margin-bottom:2px">Số lượng</div>'
-          + '<input type="text" inputmode="numeric" id="bgi_sl_' + i + '" value="' + it.sl + '" placeholder="VD: 2" style="width:100%;background:#0d2035;color:#fff;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt" '
-          + 'oninput="bgSetSL(' + i + ')"></div>'
-          + '<div><div style="font-size:9pt;color:#aaa;margin-bottom:2px">Đơn giá (đ)</div>'
-          + '<input type="text" inputmode="numeric" id="bgi_gia_' + i + '" value="' + it.gia + '" placeholder="VD: 5000000" style="width:100%;background:#0d2035;color:#fff;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt" '
-          + 'oninput="bgSetGia(' + i + ')"></div>'
-          + '<div><div style="font-size:9pt;color:#aaa;margin-bottom:2px">Thành tiền</div>'
-          + '<input id="bgi_tt_' + i + '" readonly value="' + fmt(it.sl * it.gia) + '" style="width:100%;background:#0d1e30;color:#f39c12;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt;font-weight:700"></div>'
-          + '</div></div>';
+          + '<div style="display:grid;gap:6px;margin-top:6px;background:#0a1929;border-radius:6px;padding:8px">'
+          + '<div style="display:grid;grid-template-columns:74px 1fr;align-items:center;gap:6px"><div style="font-size:9pt;color:#aaa">Số lượng</div>'
+          + '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px">'
+          + '<button type="button" class="stp" onclick="bgStepSL(' + i + ',-1,event)" ontouchend="bgStepSL(' + i + ',-1,event)">−</button>'
+          + '<input type="text" inputmode="numeric" id="bgi_sl_' + i + '" value="' + it.sl + '" style="width:100%;min-width:0;background:#0d2035;color:#fff;border:1px solid #2a3a50;border-radius:4px;padding:5px 4px;font-size:11pt;text-align:center" oninput="bgSetSL(' + i + ')">'
+          + '<button type="button" class="stp" onclick="bgStepSL(' + i + ',1,event)" ontouchend="bgStepSL(' + i + ',1,event)">＋</button></div></div>'
+          + '<div style="display:grid;grid-template-columns:74px 1fr;align-items:center;gap:6px"><div style="font-size:9pt;color:#aaa">Đơn giá (đ)</div>'
+          + '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px">'
+          + '<button type="button" class="stp" onclick="bgStepGia(' + i + ',-1,event)" ontouchend="bgStepGia(' + i + ',-1,event)">−</button>'
+          + '<input type="text" inputmode="numeric" id="bgi_gia_' + i + '" value="' + it.gia + '" placeholder="VD: 5000000" style="width:100%;min-width:0;background:#0d2035;color:#fff;border:1px solid #2a3a50;border-radius:4px;padding:5px 4px;font-size:11pt;text-align:center" oninput="bgSetGia(' + i + ')">'
+          + '<button type="button" class="stp" onclick="bgStepGia(' + i + ',1,event)" ontouchend="bgStepGia(' + i + ',1,event)">＋</button></div></div>'
+          + '<div style="display:grid;grid-template-columns:74px 1fr;align-items:center;gap:6px"><div style="font-size:9pt;color:#aaa">Thành tiền</div>'
+          + '<input id="bgi_tt_' + i + '" readonly value="' + fmt(it.sl * it.gia) + '" style="width:100%;background:#0d1e30;color:#f39c12;border:1px solid #2a3a50;border-radius:4px;padding:5px 6px;font-size:11pt;font-weight:700;text-align:center"></div>'
+          + '</div>';
       }).join('');
     }
 
@@ -1952,7 +2052,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       var savedState = {};
       var ids = [
         'bg_soBG', 'bg_khachHang', 'bg_dcKH', 'bg_dtKH', 'bg_ngay', 'bg_thang', 'bg_nam',
-        'bg_vat', 'bg_ghiChu', 'bg_template',
+        'bg_vat', 'bg_ck', 'bg_ghiChu', 'bg_template',
         'benB_ten', 'benB_dd', 'benB_cv', 'benB_dc', 'benB_mst', 'benB_stk', 'benB_nh', 'benB_dt'
       ];
       ids.forEach(function (id) { var el = document.getElementById(id); if (el) savedState[id] = el.value; });
@@ -1974,7 +2074,7 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       if (!window._savedState) return;
       var ids = [
         'bg_soBG', 'bg_khachHang', 'bg_dcKH', 'bg_dtKH', 'bg_ngay', 'bg_thang', 'bg_nam',
-        'bg_vat', 'bg_ghiChu', 'bg_template',
+        'bg_vat', 'bg_ck', 'bg_ghiChu', 'bg_template',
         'benB_ten', 'benB_dd', 'benB_cv', 'benB_dc', 'benB_mst', 'benB_stk', 'benB_nh', 'benB_dt'
       ];
       ids.forEach(function (id) {
