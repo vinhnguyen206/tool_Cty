@@ -1233,68 +1233,70 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       doc.addFileToVFS('TinosR.ttf', BG_PDF_FONTS.reg); doc.addFont('TinosR.ttf', 'Tinos', 'normal');
       doc.addFileToVFS('TinosB.ttf', BG_PDF_FONTS.bold); doc.addFont('TinosB.ttf', 'Tinos', 'bold');
       doc.addFileToVFS('TinosI.ttf', BG_PDF_FONTS.ital); doc.addFont('TinosI.ttf', 'Tinos', 'italic');
-      var M = 12, PW = 210, PH = 297, CW = PW - 2 * M;
+      var M = 12, PW = 210, PH = 297, CW = PW - 2 * M, RX = PW - M;
       var t = bgCalc();
       doc.setFont('Tinos', 'normal'); doc.setTextColor(0, 0, 0);
       var y = M + 2;
+      // Header công ty — CANH PHẢI (giống Excel/preview)
       doc.setFont('Tinos', 'bold'); doc.setFontSize(12);
-      doc.text(bgG('benB_ten') || '', M, y); y += 5.5;
+      doc.text(bgG('benB_ten') || '', RX, y, { align: 'right' }); y += 5;
       doc.setFont('Tinos', 'normal'); doc.setFontSize(10);
-      if (bgG('benB_dc')) { var addr = doc.splitTextToSize('Địa chỉ: ' + bgG('benB_dc'), CW); doc.text(addr, M, y); y += addr.length * 4.6; }
-      if (bgG('benB_dt')) { doc.text('Tel: ' + bgG('benB_dt'), M, y); y += 5; }
-      y += 4;
-      doc.setFont('Tinos', 'bold'); doc.setFontSize(20); doc.setTextColor(200, 0, 0);
+      if (bgG('benB_dc')) { var addr = doc.splitTextToSize('Địa Chỉ: ' + bgG('benB_dc'), CW); doc.text(addr, RX, y, { align: 'right' }); y += addr.length * 4.4; }
+      if (bgG('benB_dt')) { doc.text('Tel: ' + bgG('benB_dt'), RX, y, { align: 'right' }); y += 4.4; }
+      y += 3;
+      doc.setFont('Tinos', 'bold'); doc.setFontSize(22); doc.setTextColor(230, 0, 0);
       doc.text('Bảng Chào Giá Thiết Bị', PW / 2, y, { align: 'center' });
-      doc.setTextColor(0, 0, 0); y += 9;
-      doc.setFont('Tinos', 'normal'); doc.setFontSize(10.5);
-      doc.text('Ngày báo giá: ' + bgNgay(), M, y); y += 6;
-      doc.text('Kính gửi quý công ty báo giá sản phẩm có thông số kỹ thuật chi tiết như sau:', M, y); y += 6.5;
-      // Bên mua — field trống thì bỏ qua (không in nhãn trơ)
-      if (bgG('bg_khachHang')) {
-        doc.setFont('Tinos', 'bold'); doc.text('Tên dự án / Khách hàng: ', M, y);
-        var lw = doc.getTextWidth('Tên dự án / Khách hàng: '); doc.setFont('Tinos', 'normal');
-        var khv = doc.splitTextToSize(bgG('bg_khachHang'), CW - lw); doc.text(khv, M + lw, y); y += Math.max(1, khv.length) * 5.2;
-      }
-      if (bgG('bg_dcKH') || bgG('bg_dtKH')) {
-        if (bgG('bg_dcKH')) { doc.setFont('Tinos', 'bold'); doc.text('Địa chỉ: ', M, y); var w1 = doc.getTextWidth('Địa chỉ: '); doc.setFont('Tinos', 'normal'); doc.text(bgG('bg_dcKH'), M + w1, y); }
-        if (bgG('bg_dtKH')) { doc.setFont('Tinos', 'bold'); doc.text('Điện thoại: ', M + CW * 0.62, y); doc.setFont('Tinos', 'normal'); doc.text(bgG('bg_dtKH'), M + CW * 0.62 + doc.getTextWidth('Điện thoại: '), y); }
-        y += 6;
-      }
+      doc.setTextColor(0, 0, 0); y += 8;
+      doc.setFont('Tinos', 'bold'); doc.setFontSize(10); doc.setTextColor(192, 0, 0);
+      doc.text('   Ngày báo giá: ' + bgNgay(), M, y); doc.setTextColor(0, 0, 0); y += 6;
+      // Kính gửi (gộp khách hàng, giống Excel)
+      doc.setFont('Tinos', 'normal'); doc.setFontSize(10);
+      var kh = bgG('bg_khachHang');
+      var greet = kh ? ('Kính gửi: ' + kh + (bgG('bg_dcKH') ? ' - ' + bgG('bg_dcKH') : '') + (bgG('bg_dtKH') ? ' - ĐT: ' + bgG('bg_dtKH') : ''))
+        : 'Kính gửi quý công ty báo giá sản phẩm có thông số như sau:';
+      var gl = doc.splitTextToSize(greet, CW); doc.text(gl, M, y); y += gl.length * 4.6 + 1;
+      doc.setFont('Tinos', 'bold'); doc.setFontSize(12); doc.text('Thông tin thiết bị', M, y); y += 5;
 
-      var colW = { stt: 10, sl: 13, gia: 27, tt: 28 };
+      var colW = { stt: 10, sl: 15, gia: 27, tt: 28 };
       colW.desc = CW - colW.stt - colW.sl - colW.gia - colW.tt;
       var descTextW = colW.desc - 3;
       var descMap = {};
       bgItems.forEach(function (it, i) {
-        var lines = [];
+        var blocks = [];
         doc.setFont('Tinos', 'bold'); doc.setFontSize(10);
-        doc.splitTextToSize(it.ten || '', descTextW).forEach(function (x) { lines.push({ t: x, b: true, s: 10, h: 4.3, c: [0, 0, 0] }); });
+        blocks.push({ b: true, s: 10, lh: 4.3, lines: doc.splitTextToSize(it.ten || '', descTextW) });
         doc.setFont('Tinos', 'normal'); doc.setFontSize(9);
-        bgSpecsList(it).forEach(function (sp) { doc.splitTextToSize(sp, descTextW).forEach(function (x) { lines.push({ t: x, b: false, s: 9, h: 3.9, c: [45, 45, 45] }); }); });
-        descMap[i] = { lines: lines, h: lines.reduce(function (a, L) { return a + L.h; }, 0) + 3 };
+        bgSpecsList(it).forEach(function (sp) { blocks.push({ b: false, s: 9, lh: 3.9, lines: doc.splitTextToSize(sp, descTextW) }); });
+        var h = 0; blocks.forEach(function (bk) { h += bk.lines.length * bk.lh; });
+        descMap[i] = { blocks: blocks, h: h + 3 };
       });
       var body = bgItems.map(function (it, i) { return [String(i + 1), '', String(it.sl), fmt(it.gia), fmt(it.sl * it.gia)]; });
       var vatPct = (document.getElementById('bg_vat') ? document.getElementById('bg_vat').value : 8);
-      function totRow(label, val, fill) {
-        return [{ content: label, colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: fill } }, { content: val, styles: { halign: 'right', fontStyle: 'bold', fillColor: fill } }];
+      function totRow(label, val) {
+        return [{ content: label, colSpan: 4, styles: { halign: 'center', fontStyle: 'bold' } }, { content: val, styles: { halign: 'center', fontStyle: 'bold' } }];
       }
-      body.push(totRow('Tổng tiền hàng:', fmt(t.sub), [238, 238, 255]));
-      body.push(totRow('Thuế VAT (' + vatPct + '%):', fmt(t.vat), [238, 238, 255]));
-      body.push(totRow('Tổng cộng thanh toán:', fmt(t.grand), [221, 221, 255]));
+      body.push(totRow('Tổng cộng', fmt(t.sub)));
+      body.push(totRow('VAT ' + vatPct + '%', fmt(t.vat)));
+      body.push(totRow('Tổng cộng', fmt(t.grand)));
       doc.autoTable({
         startY: y, margin: { left: M, right: M },
-        head: [['STT', 'Mô tả quy cách thiết bị', 'SL', 'Đơn giá (đ)', 'Thành tiền (đ)']],
+        head: [['STT', 'Thông số thiết bị', 'Số\nlượng', 'Giá tiền\n(VND)', 'Thành tiền\n(VND)']],
         body: body, theme: 'grid',
-        styles: { font: 'Tinos', fontStyle: 'normal', fontSize: 9.5, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
-        headStyles: { font: 'Tinos', fontStyle: 'bold', fillColor: [26, 79, 160], textColor: [255, 255, 255], halign: 'center', fontSize: 10 },
-        columnStyles: { 0: { cellWidth: colW.stt, halign: 'center' }, 1: { cellWidth: colW.desc }, 2: { cellWidth: colW.sl, halign: 'center' }, 3: { cellWidth: colW.gia, halign: 'right' }, 4: { cellWidth: colW.tt, halign: 'right' } },
+        styles: { font: 'Tinos', fontStyle: 'normal', fontSize: 9.5, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak', halign: 'center' },
+        headStyles: { font: 'Tinos', fontStyle: 'bold', fillColor: [217, 225, 242], textColor: [0, 0, 0], halign: 'center', fontSize: 10 },
+        columnStyles: { 0: { cellWidth: colW.stt }, 1: { cellWidth: colW.desc, halign: 'left' }, 2: { cellWidth: colW.sl }, 3: { cellWidth: colW.gia }, 4: { cellWidth: colW.tt } },
         didParseCell: function (data) {
           if (data.section === 'body' && data.column.index === 1 && descMap[data.row.index]) { data.cell.text = ''; data.cell.styles.minCellHeight = descMap[data.row.index].h; }
         },
         didDrawCell: function (data) {
           if (data.section === 'body' && data.column.index === 1 && descMap[data.row.index]) {
-            var m = descMap[data.row.index], x = data.cell.x + 1.5, yy = data.cell.y + 3.4;
-            m.lines.forEach(function (L) { doc.setFont('Tinos', L.b ? 'bold' : 'normal'); doc.setFontSize(L.s); doc.setTextColor(L.c[0], L.c[1], L.c[2]); doc.text(L.t, x, yy); yy += L.h; });
+            var m = descMap[data.row.index], x = data.cell.x + 1.5, lineY = data.cell.y + 1.5, cellRight = data.cell.x + data.cell.width;
+            m.blocks.forEach(function (bk, bi) {
+              doc.setFont('Tinos', bk.b ? 'bold' : 'normal'); doc.setFontSize(bk.s);
+              var g = bk.b ? 0 : 45; doc.setTextColor(g, g, g);
+              bk.lines.forEach(function (ln) { doc.text(ln, x, lineY + 3); lineY += bk.lh; });
+              if (bi < m.blocks.length - 1) { doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.1); doc.line(data.cell.x, lineY + 0.3, cellRight, lineY + 0.3); }
+            });
             doc.setTextColor(0, 0, 0);
           }
         }
@@ -1302,17 +1304,20 @@ Hàng nhập khẩu có đầy đủ CO CQ</textarea>
       y = doc.lastAutoTable.finalY + 5;
       function pageGuard(need) { if (y + need > PH - M) { doc.addPage(); y = M + 4; } }
 
-      pageGuard(8);
-      doc.setFont('Tinos', 'italic'); doc.setFontSize(10);
-      var bw = doc.splitTextToSize('Bằng chữ: ' + toWords(t.grand), CW); doc.text(bw, M, y); y += bw.length * 4.6 + 2;
       pageGuard(10);
-      doc.setFont('Tinos', 'bold'); doc.setFontSize(11); doc.text('GHI CHÚ GIAO HÀNG :', M, y); y += 5.5;
+      doc.setFont('Tinos', 'bold'); doc.setFontSize(12); doc.setTextColor(0, 0, 0); doc.text('Ghi chú:', M, y); y += 5;
       doc.setFont('Tinos', 'normal'); doc.setFontSize(10);
       (bgG('bg_ghiChu') || '').split('\n').forEach(function (ln) { var ll = doc.splitTextToSize(ln, CW); doc.text(ll, M, y); y += ll.length * 4.4; });
-      y += 2; pageGuard(14);
-      doc.setFont('Tinos', 'bold'); doc.text('Đơn vị thụ hưởng: ', M, y); var wl = doc.getTextWidth('Đơn vị thụ hưởng: ');
-      doc.setFont('Tinos', 'normal'); var bl = doc.splitTextToSize(bgG('benB_ten') || '', CW - wl); doc.text(bl, M + wl, y); y += bl.length * 4.6;
-      doc.text('Tài khoản: ' + bgG('benB_stk') + '  tại  ' + bgG('benB_nh'), M, y); y += 9;
+      y += 2; pageGuard(34);
+      doc.setFont('Tinos', 'bold'); doc.setFontSize(12); doc.text('Phương Thức Thanh Toán Và Giao Hàng', M, y); y += 5;
+      doc.setFont('Tinos', 'normal'); doc.setFontSize(10); doc.text('Thanh toán: 100%  Ngay khi nhận hàng', M, y); y += 5;
+      doc.setFontSize(9);
+      ['Thông tin thanh toán:', '       Chuyển khoản Công ty:', '    Tên TK: ' + bgG('benB_ten'),
+        '    Số TK: ' + bgG('benB_stk'), '    Tại: ' + bgG('benB_nh'),
+        'Rất mong với báo giá này thỏa mãn được yêu cầu của quý khách và sớm nhận được hợp tác'
+      ].forEach(function (ln) { var ll = doc.splitTextToSize(ln, CW); doc.text(ll, M, y); y += ll.length * 3.9; });
+      y += 2;
+      doc.setFontSize(10); doc.text('Rất mong nhận được phản hồi từ quý công ty', PW / 2, y, { align: 'center' }); y += 8;
 
       pageGuard(58);
       var cx1 = M + CW * 0.25, cx2 = M + CW * 0.75;
